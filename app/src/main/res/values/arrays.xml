@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="xposed_scope">
+        <!-- 在此填写你要 hook 的目标包名，* 占位由 LSPosed 由用户选择 -->
+    </string-array>
+</resources>

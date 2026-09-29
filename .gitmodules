@@ -1,0 +1,5 @@
+[submodule "app/src/main/cpp/dobby"]
+path = app/src/main/cpp/dobby
+url = https://github.com/jmpews/Dobby.git
+branch = master
+shallow = true

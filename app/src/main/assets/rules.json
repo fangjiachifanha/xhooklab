@@ -1,0 +1,20 @@
+[
+  {
+    "pkg": "com.example.target",
+    "clazz": "com.example.target.MainActivity",
+    "method": "getSecret",
+    "paramTypes": "",
+    "hookType": "REPLACE",
+    "enabled": true,
+    "value": "HACKED"
+  },
+  {
+    "pkg": "com.example.target",
+    "clazz": "com.example.target.MainActivity",
+    "method": "setLevel",
+    "paramTypes": "int",
+    "hookType": "REPLACE_ARGS",
+    "enabled": true,
+    "value": "9999"
+  }
+]
