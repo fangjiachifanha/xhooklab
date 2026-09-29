@@ -4,7 +4,10 @@
 #include <stdint.h>
 #include <dlfcn.h>
 #include <android/log.h>
+
+#ifdef XHL_HAVE_DOBBY
 #include "dobby.h"
+#endif
 
 #define TAG "XHookLab-Native"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -33,9 +36,11 @@ static int free_slot(void) {
     return -1;
 }
 
+#ifdef XHL_HAVE_DOBBY
 static void common_replace(void) {
     LOGI("hook hit (generic stub)");
 }
+#endif
 
 JNIEXPORT jlong JNICALL
 Java_com_xhooklab_NativeHook_resolve(JNIEnv *env, jclass clz, jstring jlib, jstring jsym) {
@@ -61,6 +66,7 @@ Java_com_xhooklab_NativeHook_hookSymbol(JNIEnv *env, jclass clz, jstring jlib, j
     void *addr = (void *)(uintptr_t)target;
     jlong ret = 0;
 
+#ifdef XHL_HAVE_DOBBY
     if (!addr) { LOGI("hookSymbol: null addr"); goto done; }
 
     int idx = find_slot(addr);
@@ -80,6 +86,11 @@ Java_com_xhooklab_NativeHook_hookSymbol(JNIEnv *env, jclass clz, jstring jlib, j
     snprintf(g_hooks[idx].sym, sizeof(g_hooks[idx].sym), "%s", sym);
     LOGI("hooked %s!%s @%p -> orig %p", lib, sym, addr, orig);
     ret = (jlong)(uintptr_t)orig;
+#else
+    (void)clz; (void)addr;
+    LOGI("hookSymbol called without Dobby: %s!%s (stub)", lib, sym);
+    ret = 0;
+#endif
 
 done:
     (*env)->ReleaseStringUTFChars(env, jlib, lib);
@@ -89,23 +100,34 @@ done:
 
 JNIEXPORT jboolean JNICALL
 Java_com_xhooklab_NativeHook_unhook(JNIEnv *env, jclass clz, jlong addr) {
+#ifndef XHL_HAVE_DOBBY
+    (void)env; (void)clz; (void)addr;
+    LOGI("unhook (no Dobby stub)");
+    return JNI_FALSE;
+#else
     int idx = find_slot((void *)(uintptr_t)addr);
     if (idx < 0) return JNI_FALSE;
     int rc = DobbyDestroy((void *)(uintptr_t)addr);
     LOGI("unhook %p rc=%d", (void *)(uintptr_t)addr, rc);
     g_hooks[idx].used = 0;
     return rc == 0 ? JNI_TRUE : JNI_FALSE;
+#endif
 }
 
 JNIEXPORT jstring JNICALL
 Java_com_xhooklab_NativeHook_info(JNIEnv *env, jclass clz) {
     char buf[4096];
     int off = 0;
-    off += snprintf(buf + off, sizeof(buf) - off, "xhooklab native, hooks:\n");
+#ifdef XHL_HAVE_DOBBY
+    off += snprintf(buf + off, sizeof(buf) - off, "xhooklab native (Dobby ON), hooks:\n");
+#else
+    off += snprintf(buf + off, sizeof(buf) - off, "xhooklab native (Dobby OFF stub), hooks:\n");
+#endif
     for (int i = 0; i < MAX_HOOKS && off < (int)sizeof(buf) - 200; i++) {
         if (!g_hooks[i].used) continue;
         off += snprintf(buf + off, sizeof(buf) - off, "  %s!%s @%p\n",
                         g_hooks[i].lib, g_hooks[i].sym, g_hooks[i].addr);
     }
+    (void)clz;
     return (*env)->NewStringUTF(env, buf);
 }
